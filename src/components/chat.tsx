@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { type CoreMessage } from 'ai';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { continueTextConversation } from '@/app/actions';
 import { readStreamableValue } from 'ai/rsc';
 import { Input } from '@/components/ui/input';
@@ -10,11 +10,17 @@ import { Button } from '@/components/ui/button';
 import { IconArrowUp } from '@/components/ui/icons';
 import  Link from "next/link";
 import AboutCard from "@/components/cards/aboutcard";
+import { readFromLocalStorage, writeToLocalStorage } from "@/lib/local-storage";
 export const maxDuration = 30;
 
+const MESSAGE_HISTORY_KEY = 'messages';
 export default function Chat() {
   const [messages, setMessages] = useState<CoreMessage[]>([]);
   const [input, setInput] = useState<string>('');  
+
+  useEffect(() => {
+      setMessages(readFromLocalStorage(MESSAGE_HISTORY_KEY, [] as CoreMessage[]));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,6 +33,14 @@ export default function Chat() {
     const result = await continueTextConversation(newMessages);
     for await (const content of readStreamableValue(result)) {
       setMessages([
+        ...newMessages,
+        {
+          role: 'assistant',
+          content: content as string, 
+        },
+      ]);
+
+      writeToLocalStorage(MESSAGE_HISTORY_KEY, [
         ...newMessages,
         {
           role: 'assistant',
